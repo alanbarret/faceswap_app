@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import base64
+import time
 from dotenv import load_dotenv
 import os
 
@@ -26,6 +27,8 @@ if swap_image and target_video:
 
     if st.button("Submit"):
         st.write("Processing...")
+
+        # Make the prediction request
         response = requests.post(
             "https://api.replicate.com/v1/predictions",
             json={
@@ -43,7 +46,23 @@ if swap_image and target_video:
 
         if response.status_code == 200:
             prediction = response.json()
-            output_url = prediction['output'][0]  # Get the output URL
-            st.video(output_url)
+            prediction_id = prediction['id']
+            get_url = prediction['urls']['get']
+            
+            # Polling the status of the prediction
+            status = prediction['status']
+            while status not in ["succeeded", "failed", "canceled"]:
+                time.sleep(5)  # Wait for 5 seconds before checking the status again
+                status_response = requests.get(get_url, headers={
+                    "Authorization": f"Token {REPLICATE_API_TOKEN}",
+                }, verify=False)  # Disable SSL verification for status polling
+                status_data = status_response.json()
+                status = status_data['status']
+
+            if status == "succeeded":
+                output_url = status_data['output'][0]  # Assuming the output is a URL
+                st.video(output_url)
+            else:
+                st.error("Error: " + status_data.get('error', 'Unknown error occurred.'))
         else:
             st.error("Error: " + response.text)
