@@ -34,7 +34,7 @@ if swap_image and target_video:
 
     if swap_image_url and target_video_url:
         st.image(swap_image, caption="Swap Image", use_column_width=True)
-        st.video(target_video, caption="Target Video")
+        st.video(target_video, format='video/mp4', start_time=0)
 
         if st.button("Submit"):
             st.write("Processing...")
@@ -54,7 +54,7 @@ if swap_image and target_video:
 
                 output_video_url = output['output']  # Assuming output is a video URL
                 st.header("Output")
-                st.video(output_video_url, caption="Resulting Video")
+                st.video(output_video_url, format='video/mp4', start_time=0)
 
             except Exception as e:
                 st.error(f"Error: {e}")
@@ -62,5 +62,3 @@ if swap_image and target_video:
 # Show a warning if no files are uploaded
 if not swap_image and not target_video:
     st.warning("Please upload a swap image and a target video to get started.")
-
-st.set_option('deprecation.showfileUploaderEncoding', False)  # To suppress upload file encoding warning
