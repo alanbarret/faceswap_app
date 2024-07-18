@@ -1,13 +1,9 @@
 import streamlit as st
-from dotenv import load_dotenv
-import os
 import replicate
 import base64
 
-# Load environment variables from .env file
-load_dotenv()
-
-REPLICATE_API_TOKEN = os.getenv('REPLICATE_API_TOKEN')
+# Load the REPLICATE_API_TOKEN from secrets.toml
+REPLICATE_API_TOKEN = st.secrets["REPLICATE_API_TOKEN"]
 
 st.title("Face Swap App")
 
@@ -48,11 +44,10 @@ if swap_image and target_video:
             try:
                 output = replicate.run(
                     "arabyai-replicate/roop_face_swap:11b6bf0f4e14d808f655e87e5448233cceff10a45f659d71539cafb7163b2e84",
-                    input=input_data,
-                    auth=REPLICATE_API_TOKEN
+                    input=input_data
                 )
 
-                output_video_url = output['output']  # Assuming output is a video URL
+                output_video_url = output  # Assuming output is a video URL
                 st.header("Output")
                 st.video(output_video_url, format='video/mp4', start_time=0)
 
