@@ -1,18 +1,22 @@
 import streamlit as st
+import requests
 import replicate
-import base64
+import time
 
 # Load the REPLICATE_API_TOKEN from secrets.toml
 REPLICATE_API_TOKEN = st.secrets["REPLICATE_API_TOKEN"]
 
 st.title("Face Swap App")
 
-# Function to convert file to base64 URL
-def file_to_base64_url(file):
-    if file:
-        encoded_file = base64.b64encode(file.read()).decode('utf-8')
-        return f"data:{file.type};base64,{encoded_file}"
-    return None
+# Function to upload file to tmpfiles.org and return the URL
+def upload_to_tmpfiles(file):
+    files = {'file': file}
+    response = requests.post("https://tmpfiles.org/api/v1/upload", files=files)
+    if response.status_code == 200:
+        return response.json().get('data', {}).get('url')
+    else:
+        st.error("Failed to upload file to tmpfiles.org")
+        return None
 
 # Upload swap image
 st.header("Upload Swap Image")
@@ -25,34 +29,44 @@ target_video = st.file_uploader("Choose an MP4 video", type=["mp4"])
 # Display uploaded files if available
 if swap_image and target_video:
     st.header("Preview")
-    swap_image_url = file_to_base64_url(swap_image)
-    target_video_url = file_to_base64_url(target_video)
+    swap_image_url = upload_to_tmpfiles(swap_image)
+    target_video_url = upload_to_tmpfiles(target_video)
 
     if swap_image_url and target_video_url:
         st.image(swap_image, caption="Swap Image", use_column_width=True)
         st.video(target_video, format='video/mp4', start_time=0)
 
         if st.button("Submit"):
-            st.write("Processing...")
+            st.write("Processing... This may take a while.")
+            st.spinner("Performing face swap...")
 
-            # Make the prediction request using replicate.run()
+            # Function to perform the prediction request with retries
+            def perform_prediction(input_data, retries=3, delay=5):
+                for attempt in range(retries):
+                    try:
+                        output = replicate.run(
+                            "arabyai-replicate/roop_face_swap:11b6bf0f4e14d808f655e87e5448233cceff10a45f659d71539cafb7163b2e84",
+                            input=input_data
+                        )
+                        return output
+                    except Exception as e:
+                        st.error(f"Attempt {attempt + 1} failed: {e}")
+                        time.sleep(delay)
+                st.error("All attempts failed. Please try again later.")
+                return None
+
+            # Prepare input data
             input_data = {
                 "swap_image": swap_image_url,
                 "target_video": target_video_url
             }
 
-            try:
-                output = replicate.run(
-                    "arabyai-replicate/roop_face_swap:11b6bf0f4e14d808f655e87e5448233cceff10a45f659d71539cafb7163b2e84",
-                    input=input_data
-                )
+            # Perform prediction with retries
+            output_video_url = perform_prediction(input_data)
 
-                output_video_url = output  # Assuming output is a video URL
+            if output_video_url:
                 st.header("Output")
                 st.video(output_video_url, format='video/mp4', start_time=0)
-
-            except Exception as e:
-                st.error(f"Error: {e}")
 
 # Show a warning if no files are uploaded
 if not swap_image and not target_video:
