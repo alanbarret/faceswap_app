@@ -1,9 +1,8 @@
 import streamlit as st
-import requests
-import base64
-import time
 from dotenv import load_dotenv
 import os
+import replicate
+import base64
 
 # Load environment variables from .env file
 load_dotenv()
@@ -12,57 +11,56 @@ REPLICATE_API_TOKEN = os.getenv('REPLICATE_API_TOKEN')
 
 st.title("Face Swap App")
 
-# Function to convert file to base64
-def file_to_base64(file):
-    return base64.b64encode(file.read()).decode('utf-8')
+# Function to convert file to base64 URL
+def file_to_base64_url(file):
+    if file:
+        encoded_file = base64.b64encode(file.read()).decode('utf-8')
+        return f"data:{file.type};base64,{encoded_file}"
+    return None
 
 # Upload swap image
-swap_image = st.file_uploader("Upload Swap Image", type=["jpg", "jpeg", "png"])
+st.header("Upload Swap Image")
+swap_image = st.file_uploader("Choose a JPG, JPEG, or PNG image", type=["jpg", "jpeg", "png"])
+
 # Upload target video
-target_video = st.file_uploader("Upload Target Video", type=["mp4"])
+st.header("Upload Target Video")
+target_video = st.file_uploader("Choose an MP4 video", type=["mp4"])
 
+# Display uploaded files if available
 if swap_image and target_video:
-    swap_image_base64 = file_to_base64(swap_image)
-    target_video_base64 = file_to_base64(target_video)
+    st.header("Preview")
+    swap_image_url = file_to_base64_url(swap_image)
+    target_video_url = file_to_base64_url(target_video)
 
-    if st.button("Submit"):
-        st.write("Processing...")
+    if swap_image_url and target_video_url:
+        st.image(swap_image, caption="Swap Image", use_column_width=True)
+        st.video(target_video, caption="Target Video")
 
-        # Make the prediction request
-        response = requests.post(
-            "https://api.replicate.com/v1/predictions",
-            json={
-                "version": "11b6bf0f4e14d808f655e87e5448233cceff10a45f659d71539cafb7163b2e84",
-                "input": {
-                    "swap_image": f"data:image/jpeg;base64,{swap_image_base64}",
-                    "target_video": f"data:video/mp4;base64,{target_video_base64}"
-                }
-            },
-            headers={
-                "Authorization": f"Token {REPLICATE_API_TOKEN}",
-                "Content-Type": "application/json"
+        if st.button("Submit"):
+            st.write("Processing...")
+
+            # Make the prediction request using replicate.run()
+            input_data = {
+                "swap_image": swap_image_url,
+                "target_video": target_video_url
             }
-        )
 
-        if response.status_code == 200:
-            prediction = response.json()
-            prediction_id = prediction['id']
-            get_url = prediction['urls']['get']
-            
-            # Polling the status of the prediction
-            status = prediction['status']
-            while status not in ["succeeded", "failed", "canceled"]:
-                time.sleep(5)  # Wait for 5 seconds before checking the status again
-                status_response = requests.get(get_url, headers={
-                    "Authorization": f"Token {REPLICATE_API_TOKEN}",
-                }, verify=False)  # Disable SSL verification for status polling
-                status_data = status_response.json()
-                status = status_data['status']
+            try:
+                output = replicate.run(
+                    "arabyai-replicate/roop_face_swap:11b6bf0f4e14d808f655e87e5448233cceff10a45f659d71539cafb7163b2e84",
+                    input=input_data,
+                    auth=REPLICATE_API_TOKEN
+                )
 
-            if status == "succeeded":
-                output_url = status_data['output'][0]  # Assuming the output is a URL
-                st.video(output_url)
-            else:
-                st.error("Error: " + status_data.get('error', 'Unknown error occurred.'))
-        else:
-            st.error("Error: " + response.text)
+                output_video_url = output['output']  # Assuming output is a video URL
+                st.header("Output")
+                st.video(output_video_url, caption="Resulting Video")
+
+            except Exception as e:
+                st.error(f"Error: {e}")
+
+# Show a warning if no files are uploaded
+if not swap_image and not target_video:
+    st.warning("Please upload a swap image and a target video to get started.")
+
+st.set_option('deprecation.showfileUploaderEncoding', False)  # To suppress upload file encoding warning
