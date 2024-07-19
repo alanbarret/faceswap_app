@@ -70,10 +70,10 @@ if uploaded_video is not None:
     else:
         st.error('Failed to upload the video.')
 
-if image_url and video_url:
-    st.header("Preview")
-    st.image(uploaded_image, caption="Swap Image", use_column_width=True)
-    st.video(uploaded_video, format='video/mp4', start_time=0)
+# if image_url and video_url:
+#     st.header("Preview")
+#     st.image(uploaded_image, caption="Swap Image", use_column_width=True)
+#     st.video(uploaded_video, format='video/mp4', start_time=0)
 
     if st.button("Submit"):
         with st.spinner("Performing face swap..."):
