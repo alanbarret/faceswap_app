@@ -40,16 +40,12 @@ def perform_prediction(input_data):
 # Streamlit app
 st.title('Face Swap App')
 
+image_url = None
+video_url = None
+
 # Upload swap image
 st.header("Upload Swap Image")
 uploaded_image = st.file_uploader('Choose an image', type=['png', 'jpg', 'jpeg'])
-
-# Upload target video
-st.header("Upload Target Video")
-uploaded_video = st.file_uploader('Choose a video', type=['mp4', 'mov', 'avi'])
-
-image_url = None
-video_url = None
 
 if uploaded_image is not None:
     if is_valid_image(uploaded_image):
@@ -60,6 +56,10 @@ if uploaded_image is not None:
             st.write('Image Download URL:', image_url)
         else:
             st.error('Failed to upload the image.')
+
+# Upload target video
+st.header("Upload Target Video")
+uploaded_video = st.file_uploader('Choose a video', type=['mp4', 'mov', 'avi'])
 
 if uploaded_video is not None:
     st.video(uploaded_video)
