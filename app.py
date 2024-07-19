@@ -53,7 +53,7 @@ video_url = None
 
 if uploaded_image is not None:
     if is_valid_image(uploaded_image):
-        # st.image(uploaded_image, caption='Uploaded Image', use_column_width=True)
+        st.image(uploaded_image, caption='Uploaded Image', use_column_width=True)
         image_url = upload_file(uploaded_image)
         if image_url:
             st.success('Image uploaded successfully!')
@@ -62,7 +62,7 @@ if uploaded_image is not None:
             st.error('Failed to upload the image.')
 
 if uploaded_video is not None:
-    # st.video(uploaded_video)
+    st.video(uploaded_video)
     video_url = upload_file(uploaded_video)
     if video_url:
         st.success('Video uploaded successfully!')
