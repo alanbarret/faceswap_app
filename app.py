@@ -1,7 +1,6 @@
 import streamlit as st
 import requests
 import replicate
-import time
 from PIL import Image
 
 # Function to upload file to tmpfiles.org and return the URL
@@ -26,21 +25,17 @@ def is_valid_image(image_file):
         st.error(f"Invalid image file: {e}")
         return False
 
-# Function to perform prediction with retries
-def perform_prediction(input_data, retries=3, delay=5):
-    for attempt in range(retries):
-        try:
-            with st.spinner(f"Attempt {attempt + 1} of {retries}..."):
-                output = replicate.run(
-                    "arabyai-replicate/roop_face_swap:11b6bf0f4e14d808f655e87e5448233cceff10a45f659d71539cafb7163b2e84",
-                    input=input_data
-                )
-                return output
-        except Exception as e:
-            st.error(f"Attempt {attempt + 1} failed: {e}")
-            time.sleep(delay)
-    st.error("All attempts failed. Please try again later.")
-    return None
+# Function to perform prediction
+def perform_prediction(input_data):
+    try:
+        output = replicate.run(
+            "arabyai-replicate/roop_face_swap:11b6bf0f4e14d808f655e87e5448233cceff10a45f659d71539cafb7163b2e84",
+            input=input_data
+        )
+        return output
+    except Exception as e:
+        st.error(f"Prediction failed: {e}")
+        return None
 
 # Streamlit app
 st.title('Face Swap App')
@@ -75,24 +70,27 @@ if uploaded_video is not None:
     else:
         st.error('Failed to upload the video.')
 
+if image_url and video_url:
+    st.header("Preview")
+    st.image(uploaded_image, caption="Swap Image", use_column_width=True)
+    st.video(uploaded_video, format='video/mp4', start_time=0)
+
     if st.button("Submit"):
-        st.write("Processing... This may take a while.")
-        st.spinner("Performing face swap...")
+        with st.spinner("Performing face swap..."):
+            # Prepare input data
+            input_data = {
+                "swap_image": image_url,
+                "target_video": video_url
+            }
 
-        # Prepare input data
-        input_data = {
-            "swap_image": image_url,
-            "target_video": video_url
-        }
+            # Perform prediction
+            output_video_url = perform_prediction(input_data)
 
-        # Perform prediction with retries
-        output_video_url = perform_prediction(input_data)
-
-        if output_video_url:
-            st.header("Output")
-            st.video(output_video_url, format='video/mp4', start_time=0)
-        else:
-            st.error("Face swap prediction failed. Please check the input files and try again.")
+            if output_video_url:
+                st.header("Output")
+                st.video(output_video_url, format='video/mp4', start_time=0)
+            else:
+                st.error("Face swap prediction failed. Please check the input files and try again.")
 else:
     if uploaded_image or uploaded_video:
         st.warning("Please upload valid files for both the swap image and the target video.")
